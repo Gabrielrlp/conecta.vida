@@ -1,12 +1,24 @@
 /**
  * main.js — Conecta Vida
  *
- * Não existe servidor por trás disso (é um site 100% estático, pronto
- * pro GitHub Pages). O que dá a sensação de "backend" é a combinação de:
+ * Não existe servidor por trás disso (site 100% estático, pronto pro
+ * GitHub Pages). O que dá a sensação de "backend" é a combinação de:
  *   1) conteúdo vindo de SITE_DATA (data.js), não fixo no HTML;
- *   2) progresso salvo em localStorage entre visitas;
+ *   2) progresso/leads salvos em localStorage entre visitas;
  *   3) pequenos delays simulados nas ações, com loading de verdade.
+ *
+ * Notas de segurança (site 100% front-end, sem banco/backend):
+ *   - Nunca usamos innerHTML com texto digitado pelo usuário — só
+ *     textContent/atributos, pra evitar XSS.
+ *   - Links que abrem em nova aba levam rel="noopener noreferrer".
+ *   - A Content-Security-Policy (no <head> do index.html) restringe
+ *     de onde o site pode carregar script/estilo/fonte.
+ *   - Não existe nenhuma chave ou segredo neste arquivo — não há nada
+ *     sensível pra vazar, já que não há backend nem banco de dados.
  */
+
+// remove a classe "no-js" o quanto antes, pra ativar as animações reveal
+document.documentElement.classList.remove("no-js");
 
 const ICONS = {
   gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M3 9h18v4H3z" opacity=".4"/><path d="M12 9v12M12 9c-2-3-6-3-6-.5S9 9 12 9Zm0 0c2-3 6-3 6-.5S15 9 12 9Z"/></svg>',
@@ -26,17 +38,33 @@ document.addEventListener("DOMContentLoaded", () => {
   initCounters();
   initTestimonials();
   initContactForm();
+  initCursorGlow();
+  initScrollProgress();
+  initBackToTop();
+  initPlanCtaSync();
 });
 
 /* ---------------------------------------------------------
    Renderização de conteúdo a partir de SITE_DATA
 --------------------------------------------------------- */
 function renderContent() {
-  // --- stats (problema / resultados) ---
   document.querySelectorAll("[data-stat-group]").forEach((group) => {
     const key = group.dataset.statGroup;
     const data = SITE_DATA[key];
     if (!data) return;
+
+    if (key === "trustBar") {
+      group.innerHTML = data
+        .map(
+          (item) => `
+        <div class="trust-item">
+          <span class="trust-value">${item.value}</span>
+          <span class="trust-label">${item.label}</span>
+        </div>
+      `,
+        )
+        .join("");
+    }
 
     if (key === "problemStats" || key === "resultStats") {
       group.innerHTML = data
@@ -57,7 +85,7 @@ function renderContent() {
       group.innerHTML = data
         .map(
           (p) => `
-        <li>
+        <li class="card-shine">
           <h3>${p.title}</h3>
           <p>${p.desc}</p>
         </li>
@@ -70,7 +98,7 @@ function renderContent() {
       group.innerHTML = data
         .map(
           (f) => `
-        <div class="feature-card">
+        <div class="feature-card card-shine">
           <div class="feature-icon">${ICONS[f.icon] || ""}</div>
           <h3>${f.title}</h3>
           <p>${f.desc}</p>
@@ -84,7 +112,7 @@ function renderContent() {
       group.innerHTML = data
         .map(
           (plan) => `
-        <div class="plan-card ${plan.highlight ? "is-highlight" : ""}">
+        <div class="plan-card card-shine ${plan.highlight ? "is-highlight" : ""}">
           ${plan.highlight ? '<span class="compare-badge">Mais popular</span>' : ""}
           <p class="plan-name">${plan.name}</p>
           <div class="plan-price">
@@ -95,7 +123,7 @@ function renderContent() {
           <ul class="plan-features">
             ${plan.features.map((f) => `<li>${f}</li>`).join("")}
           </ul>
-          <a href="#contato" class="btn ${plan.highlight ? "btn-primary" : "btn-ghost"} btn-block">${plan.cta}</a>
+          <a href="#contato" class="btn ${plan.highlight ? "btn-primary" : "btn-ghost"} btn-block plan-cta" data-plan="${plan.name}">${plan.cta}</a>
         </div>
       `,
         )
@@ -103,7 +131,6 @@ function renderContent() {
     }
   });
 
-  // --- comparação ---
   const them = document.getElementById("compareThem");
   const us = document.getElementById("compareUs");
   if (them && us) {
@@ -163,7 +190,7 @@ function initReveal() {
 }
 
 /* ---------------------------------------------------------
-   Contadores animados (dão a sensação de dado "ao vivo")
+   Contadores animados
 --------------------------------------------------------- */
 function initCounters() {
   const counters = document.querySelectorAll("[data-count-to]");
@@ -249,15 +276,40 @@ function initTestimonials() {
 }
 
 /* ---------------------------------------------------------
-   Formulário de contato — sem backend real.
-   Simula envio (loading + sucesso) e guarda um log local
-   em localStorage. Pra enviar e-mail de verdade sem servidor
-   próprio, troque o bloco marcado abaixo por uma chamada a um
-   serviço tipo Formspree ou EmailJS.
+   Formulário de contato → redireciona pro WhatsApp
+   Sem backend: monta a mensagem no front-end, guarda um
+   registro local (só pra essa demo) e abre o wa.me com o
+   texto já pronto.
 --------------------------------------------------------- */
+function populatePlanSelect() {
+  const select = document.getElementById("plano");
+  if (!select) return;
+  const options = SITE_DATA.plans
+    .map(
+      (p) =>
+        `<option value="${p.name}">${p.name} (${p.price}${p.period})</option>`,
+    )
+    .join("");
+  select.innerHTML = `<option value="">Selecione um plano</option>${options}<option value="Ainda não decidi">Ainda não decidi</option>`;
+}
+
+function buildWhatsAppMessage({ nome, plano, mensagem }) {
+  return [
+    "Olá, Conecta Vida! 👋",
+    "",
+    `Nome: ${nome}`,
+    `Plano de interesse: ${plano}`,
+    "",
+    `Mensagem: ${mensagem}`,
+  ].join("\n");
+}
+
 function initContactForm() {
+  populatePlanSelect();
+
   const form = document.getElementById("contactForm");
   const btn = document.getElementById("submitBtn");
+  const label = btn.querySelector(".btn-label");
   const status = document.getElementById("formStatus");
 
   form.addEventListener("submit", async (e) => {
@@ -267,29 +319,115 @@ function initContactForm() {
       return;
     }
 
-    const data = Object.fromEntries(new FormData(form).entries());
-    data.enviadoEm = new Date().toISOString();
+    const nome = form.nome.value.trim();
+    const plano = form.plano.value;
+    const mensagem = form.mensagem.value.trim();
 
     btn.disabled = true;
-    btn.querySelector(".btn-label").textContent = "Enviando...";
+    label.textContent = "Preparando sua mensagem...";
     status.textContent = "";
 
-    // --- simula uma chamada de rede (troque por fetch() real quando integrar um serviço) ---
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    // pequeno delay simulado — sem chamada de rede real (não há backend)
+    await new Promise((resolve) => setTimeout(resolve, 650));
 
-    // guarda localmente, só pra essa demo — não é envio de e-mail de verdade
-    const log = JSON.parse(
-      localStorage.getItem("conectavida_mensagens") || "[]",
-    );
-    log.push(data);
-    localStorage.setItem("conectavida_mensagens", JSON.stringify(log));
+    // registro local só pra essa demo — não é um banco de dados de verdade
+    try {
+      const log = JSON.parse(localStorage.getItem("conectavida_leads") || "[]");
+      log.push({ nome, plano, mensagem, enviadoEm: new Date().toISOString() });
+      localStorage.setItem("conectavida_leads", JSON.stringify(log));
+    } catch (err) {
+      /* localStorage indisponível — segue o fluxo normalmente */
+    }
+
+    const texto = buildWhatsAppMessage({ nome, plano, mensagem });
+    const url = `https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${encodeURIComponent(texto)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
 
     btn.disabled = false;
-    btn.querySelector(".btn-label").textContent = "Enviar mensagem";
-    status.textContent = `Mensagem recebida — obrigado, ${data.nome.split(" ")[0]}! A gente retorna em breve.`;
+    label.textContent = "Continuar no WhatsApp";
+    status.textContent = `Prontinho, ${nome.split(" ")[0]}! Abrimos o WhatsApp com sua mensagem pronta.`;
     form.reset();
-    showToast("Mensagem enviada com sucesso");
+    showToast("Redirecionando para o WhatsApp");
   });
+}
+
+/* ---------------------------------------------------------
+   Clicar em "assinar plano X" pré-seleciona o plano no form
+--------------------------------------------------------- */
+function initPlanCtaSync() {
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest(".plan-cta");
+    if (!trigger) return;
+    const select = document.getElementById("plano");
+    if (select && trigger.dataset.plan) select.value = trigger.dataset.plan;
+  });
+}
+
+/* ---------------------------------------------------------
+   Brilho que segue o cursor (só desktop, respeita reduced-motion)
+--------------------------------------------------------- */
+function initCursorGlow() {
+  const glow = document.getElementById("cursorGlow");
+  if (!glow) return;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  if (!finePointer || reducedMotion) {
+    glow.remove();
+    return;
+  }
+
+  let x = window.innerWidth / 2,
+    y = window.innerHeight / 2,
+    raf = null;
+  function apply() {
+    glow.style.setProperty("--cursor-x", x + "px");
+    glow.style.setProperty("--cursor-y", y + "px");
+    raf = null;
+  }
+  window.addEventListener(
+    "mousemove",
+    (e) => {
+      x = e.clientX;
+      y = e.clientY;
+      if (!raf) raf = requestAnimationFrame(apply);
+    },
+    { passive: true },
+  );
+}
+
+/* ---------------------------------------------------------
+   Barra de progresso de leitura
+--------------------------------------------------------- */
+function initScrollProgress() {
+  const bar = document.getElementById("scrollProgress");
+  if (!bar) return;
+  function update() {
+    const scrollable =
+      document.documentElement.scrollHeight - window.innerHeight;
+    const pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    bar.style.width = pct + "%";
+  }
+  update();
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+}
+
+/* ---------------------------------------------------------
+   Botão voltar ao topo
+--------------------------------------------------------- */
+function initBackToTop() {
+  const btn = document.getElementById("backToTop");
+  if (!btn) return;
+  function toggle() {
+    btn.classList.toggle("is-visible", window.scrollY > 700);
+  }
+  toggle();
+  window.addEventListener("scroll", toggle, { passive: true });
+  btn.addEventListener("click", () =>
+    window.scrollTo({ top: 0, behavior: "smooth" }),
+  );
 }
 
 /* ---------------------------------------------------------

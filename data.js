@@ -10,7 +10,23 @@
  * a estrutura de main.js já está pronta pra isso.
  */
 
+/**
+ * Configurações do site. Troque o número do WhatsApp abaixo pelo
+ * número real da Conecta Vida antes de publicar (só dígitos, com
+ * código do país + DDD, ex: 55 11 99999-9999 vira '5511999999999').
+ */
+const SITE_CONFIG = {
+  whatsappNumber: "5534997625702", // TODO: colocar o número real aqui
+};
+
 const SITE_DATA = {
+  trustBar: [
+    { value: "+12M", label: "adolescentes no Brasil" },
+    { value: "78%", label: "reduziram o tempo de tela" },
+    { value: "3", label: "turmas testadas no piloto" },
+    { value: "65%", label: "mais engajamento na 2ª semana" },
+  ],
+
   problemStats: [
     {
       value: 9,
@@ -35,6 +51,10 @@ const SITE_DATA = {
     {
       title: "Recompensas Reais",
       desc: "Cada meta cumprida vira pontos — e pontos viram descontos de verdade em cultura, esporte e experiências com a família.",
+    },
+    {
+      title: "Acompanhamento Compartilhado",
+      desc: "Pais e educadores acompanham o progresso em um painel simples e resumido — apoio de verdade, sem vigiar cada passo do adolescente.",
     },
   ],
 
