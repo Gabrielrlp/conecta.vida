@@ -16,7 +16,7 @@
  * código do país + DDD, ex: 55 11 99999-9999 vira '5511999999999').
  */
 const SITE_CONFIG = {
-  whatsappNumber: "5534997625702", // TODO: colocar o número real aqui
+  whatsappNumber: "5534988371140", // TODO: colocar o número real aqui
 };
 
 const SITE_DATA = {
@@ -125,7 +125,7 @@ const SITE_DATA = {
   plans: [
     {
       name: "Escola",
-      price: "R$299",
+      price: "R$299,90",
       period: "/mês",
       desc: "Pra turmas inteiras, com acompanhamento pedagógico.",
       features: [
