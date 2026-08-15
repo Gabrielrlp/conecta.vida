@@ -22,7 +22,7 @@
   // remove a classe "no-js" o quanto antes, pra ativar as animações reveal
   document.documentElement.classList.remove("no-js");
 
-  if (SITE_CONFIG.whatsappNumber === "5534988371140") {
+  if (SITE_CONFIG.whatsappNumber === "5511999999999") {
     console.warn(
       "[Conecta Vida] O número de WhatsApp em data.js ainda é o de exemplo. Troque SITE_CONFIG.whatsappNumber antes de publicar.",
     );
