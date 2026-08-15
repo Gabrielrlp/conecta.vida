@@ -1,0 +1,5 @@
+# Troque a URL abaixo pelo endereço real do site quando publicar
+User-agent: *
+Allow: /
+
+Sitemap: https://SEU-DOMINIO-AQUI/sitemap.xml
